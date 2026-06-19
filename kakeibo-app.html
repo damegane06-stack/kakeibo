@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家計簿</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+  :root{
+    --indigo:#21304A;
+    --indigo-light:#314368;
+    --indigo-pale:#3C5078;
+    --paper:#F6F1E4;
+    --paper-card:#FCF9EF;
+    --rule:#D8CFB8;
+    --ink:#2B2620;
+    --ink-soft:#5C5648;
+    --vermillion:#C1432D;
+    --moss:#5C7A5E;
+    --amber:#B5791F;
+    --shadow: 0 2px 8px rgba(43,38,32,0.08);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(43,38,32,0.025) 0, transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(43,38,32,0.02) 0, transparent 45%);
+    color: var(--ink);
+    font-family: 'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;
+    font-size:15px;
+    line-height:1.6;
+    min-height:100vh;
+  }
+  h1,h2,h3{
+    font-family: 'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif;
+    font-weight:700;
+    margin:0;
+    color: var(--ink);
+  }
+  button{ font-family:inherit; cursor:pointer; }
+  input,select{ font-family:inherit; font-size:15px; }
+  :focus-visible{ outline: 2px solid var(--indigo-pale); outline-offset:2px; }
+
+  /* ---------- Layout shell ---------- */
+  .app{ max-width:880px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; }
+
+  header.app-header{
+    background: var(--indigo);
+    color:#F6F1E4;
+    padding:18px 20px 0 20px;
+  }
+  .header-top{ display:flex; align-items:center; gap:12px; justify-content:space-between; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .seal{
+    width:42px; height:42px; border-radius:50%;
+    border: 2px double rgba(246,241,228,0.85);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Shippori Mincho',serif; font-weight:700; font-size:15px;
+    transform: rotate(-6deg);
+    color: rgba(246,241,228,0.92);
+    flex-shrink:0;
+  }
+  .brand h1{ color:#F6F1E4; font-size:21px; letter-spacing:1px; }
+  .brand p{ margin:1px 0 0; font-size:11px; color:rgba(246,241,228,0.65); letter-spacing:1px; }
+
+  .month-nav{ display:flex; align-items:center; gap:10px; }
+  .month-nav button{
+    background:none; border:1px solid rgba(246,241,228,0.4); color:#F6F1E4;
+    width:34px; height:34px; border-radius:50%; font-size:16px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .month-nav button:hover{ background:rgba(246,241,228,0.12); }
+  .month-label{ font-size:14px; min-width:88px; text-align:center; letter-spacing:0.5px; }
+
+  .data-link{
+    background:none; border:none; color:rgba(246,241,228,0.6); font-size:12px;
+    text-decoration:underline; padding:4px 0 12px; align-self:flex-start;
+  }
+  .data-link:hover{ color:#F6F1E4; }
+
+  nav.tabs{
+    display:flex; gap:4px; padding:0 14px;
+    overflow-x:auto;
+  }
+  nav.tabs button{
+    background: var(--indigo-light);
+    color:rgba(246,241,228,0.7);
+    border:none;
+    padding:11px 18px 9px;
+    border-radius:8px 8px 0 0;
+    font-size:14px; font-weight:500;
+    white-space:nowrap;
+    position:relative; top:1px;
+  }
+  nav.tabs button.active{
+    background: var(--paper);
+    color: var(--indigo);
+    font-weight:700;
+  }
+
+  main{ flex:1; padding:22px 20px 60px; }
+  .panel{ display:none; }
+  .panel.active{ display:block; animation: fade .18s ease; }
+  @media (prefers-reduced-motion: reduce){ .panel.active{ animation:none; } }
+  @keyframes fade{ from{opacity:0;} to{opacity:1;} }
+
+  .card{
+    background: var(--paper-card);
+    border:1px solid var(--rule);
+    border-radius:10px;
+    box-shadow: var(--shadow);
+    padding:20px;
+    margin-bottom:18px;
+  }
+  .card h2{ font-size:17px; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--rule); }
+
+  /* ---------- Form ---------- */
+  .type-toggle{ display:flex; gap:10px; margin-bottom:16px; }
+  .type-toggle button{
+    flex:1; padding:12px; border-radius:8px; border:1.5px solid var(--rule);
+    background:#fff; font-size:15px; font-weight:700; color:var(--ink-soft);
+  }
+  .type-toggle button[data-type="expense"].selected{ background: var(--vermillion); border-color:var(--vermillion); color:#fff; }
+  .type-toggle button[data-type="income"].selected{ background: var(--moss); border-color:var(--moss); color:#fff; }
+
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:13px; color:var(--ink-soft); margin-bottom:5px; font-weight:500; }
+  .field input, .field select{
+    width:100%; padding:12px; border:1.5px solid var(--rule); border-radius:8px;
+    background:#fff; color:var(--ink);
+  }
+  .field input:focus, .field select:focus{ border-color: var(--indigo-pale); }
+  .amount-row{ display:flex; align-items:center; gap:8px; }
+  .amount-row span{ font-size:18px; color:var(--ink-soft); }
+  .amount-row input{ font-size:20px; font-weight:700; font-variant-numeric: tabular-nums; }
+
+  .btn-primary{
+    width:100%; padding:14px; border:none; border-radius:8px;
+    background: var(--indigo); color:#fff; font-size:16px; font-weight:700;
+    min-height:48px;
+  }
+  .btn-primary:hover{ background: var(--indigo-light); }
+  .btn-text{
+    background:none; border:none; color:var(--ink-soft); font-size:13px;
+    text-decoration:underline; padding:10px 0 0; width:100%; text-align:center;
+  }
+
+  .receipt-scan-row{ margin-bottom:18px; }
+  .btn-camera{
+    width:100%; min-height:46px; padding:11px; border-radius:8px;
+    border:1.5px dashed var(--indigo-pale); background:rgba(33,48,74,0.04);
+    color: var(--indigo); font-size:14px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-camera svg{ width:18px; height:18px; flex-shrink:0; }
+  .btn-camera:hover{ background:rgba(33,48,74,0.09); }
+  .btn-camera:disabled{ opacity:0.6; }
+  .receipt-hint{ font-size:11.5px; color:var(--ink-soft); margin:6px 4px 0; text-align:center; }
+
+  .recent-list{ margin-top:6px; }
+  .recent-list .row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:9px 0; border-bottom:1px dashed var(--rule); font-size:14px;
+  }
+  .recent-list .row:last-child{ border-bottom:none; }
+  .rl-meta{ color:var(--ink-soft); font-size:12px; }
+  .rl-amount{ font-weight:700; font-variant-numeric: tabular-nums; }
+  .rl-amount.income{ color:var(--moss); }
+  .rl-amount.expense{ color:var(--vermillion); }
+
+  /* ---------- List tab ---------- */
+  .filters{ display:flex; gap:10px; margin-bottom:16px; }
+  .filters select{ flex:1; padding:10px; border:1.5px solid var(--rule); border-radius:8px; background:#fff; }
+
+  table.ledger{ width:100%; border-collapse:collapse; font-size:14px; }
+  table.ledger th{
+    text-align:left; font-size:12px; color:var(--ink-soft); font-weight:500;
+    padding:0 8px 8px; border-bottom:2px solid var(--rule);
+  }
+  table.ledger td{ padding:11px 8px; border-bottom:1px solid var(--rule); vertical-align:middle; }
+  table.ledger td.num{ text-align:right; font-variant-numeric: tabular-nums; font-weight:700; }
+  table.ledger td.num.income{ color:var(--moss); }
+  table.ledger td.num.expense{ color:var(--vermillion); }
+  .memo-cell{ color:var(--ink-soft); font-size:12.5px; }
+  .row-actions{ display:flex; gap:6px; white-space:nowrap; }
+  .row-actions button{
+    background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 9px; font-size:12px;
+  }
+  .row-actions button:hover{ background:var(--paper); }
+
+  .totals-bar{
+    display:flex; justify-content:space-around; gap:10px; margin-top:18px; padding-top:16px;
+    border-top:2px solid var(--rule); flex-wrap:wrap;
+  }
+  .totals-bar div{ text-align:center; }
+  .totals-bar .label{ font-size:12px; color:var(--ink-soft); }
+  .totals-bar .value{ font-size:18px; font-weight:700; font-variant-numeric: tabular-nums; }
+
+  .empty-state{ text-align:center; padding:40px 10px; color:var(--ink-soft); }
+  .empty-state .seal{ margin:0 auto 14px; width:54px; height:54px; font-size:18px; border-color: var(--rule); color: var(--ink-soft); }
+
+  /* ---------- Analysis tab ---------- */
+  .summary-cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px; }
+  .summary-card{
+    background: var(--paper-card); border:1px solid var(--rule); border-radius:10px;
+    padding:16px 10px; text-align:center; box-shadow: var(--shadow);
+  }
+  .summary-card .label{ font-size:12px; color:var(--ink-soft); margin-bottom:6px; }
+  .summary-card .value{ font-size:19px; font-weight:700; font-variant-numeric: tabular-nums; }
+  .summary-card.income .value{ color:var(--moss); }
+  .summary-card.expense .value{ color:var(--vermillion); }
+  .summary-card.balance .value{ color:var(--indigo); }
+  @media (max-width:480px){
+    .summary-cards{ grid-template-columns:1fr 1fr; }
+    .summary-card.balance{ grid-column:1 / -1; }
+  }
+
+  .chart-wrap{ position:relative; height:260px; }
+  .legend-list{ display:flex; flex-wrap:wrap; gap:10px 16px; margin-top:14px; font-size:12.5px; }
+  .legend-list .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+
+  /* ---------- Budget tab ---------- */
+  .budget-row{ padding:14px 0; border-bottom:1px solid var(--rule); }
+  .budget-row:last-of-type{ border-bottom:none; }
+  .budget-row-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+  .budget-cat-wrap{ display:flex; align-items:center; gap:8px; }
+  .budget-cat{ font-weight:700; font-size:14.5px; }
+  .budget-input-wrap{ display:flex; align-items:center; gap:6px; }
+  .budget-input-wrap span{ font-size:13px; color:var(--ink-soft); }
+  .budget-input-wrap input{
+    width:110px; padding:8px 10px; border:1.5px solid var(--rule); border-radius:7px;
+    text-align:right; font-variant-numeric: tabular-nums;
+  }
+  .progress-track{ height:10px; border-radius:6px; background:var(--rule); overflow:hidden; margin-bottom:6px; }
+  .progress-fill{ height:100%; border-radius:6px; transition:width .25s ease; }
+  @media (prefers-reduced-motion: reduce){ .progress-fill{ transition:none; } }
+  .progress-fill.ok{ background:var(--moss); }
+  .progress-fill.warn{ background:var(--amber); }
+  .progress-fill.over{ background:var(--vermillion); }
+  .budget-meta{ display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--ink-soft); }
+  .stamp-mini{
+    display:inline-flex; align-items:center; justify-content:center;
+    border-radius:50%; border:2px double currentColor; width:30px; height:30px;
+    font-size:9px; font-weight:700; font-family:'Shippori Mincho',serif;
+    transform: rotate(-8deg); flex-shrink:0; opacity:0.9;
+  }
+  .stamp-mini.ok{ color:var(--moss); }
+  .stamp-mini.warn{ color:var(--amber); }
+  .stamp-mini.over{ color:var(--vermillion); }
+
+  /* ---------- Water-level gauges ---------- */
+  .gauge-card{ text-align:center; }
+  .gauge-overall{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .gauge-overall svg{ width:96px; height:130px; }
+  .gauge-overall .gauge-figures{ font-size:14px; }
+  .gauge-overall .gauge-figures .pct{ font-size:26px; font-weight:700; font-variant-numeric: tabular-nums; }
+  .gauge-empty{ color:var(--ink-soft); font-size:13.5px; padding:10px 0; }
+  .mini-gauge{ width:30px; height:42px; flex-shrink:0; }
+
+  /* ---------- AI advice ---------- */
+  .ai-advice-card .hint{ color:var(--ink-soft); font-size:12.5px; margin:-8px 0 14px; }
+  .ai-export-card .hint{ color:var(--ink-soft); font-size:12.5px; margin:-8px 0 14px; }
+
+  /* ---------- AI summary modal ---------- */
+  .summary-drawer{ max-height:90vh; overflow-y:auto; }
+  .summary-actions{ margin-bottom:10px; }
+  .btn-copy{
+    width:100%; padding:13px; border-radius:8px; border:1.5px solid var(--indigo);
+    background: var(--paper); color:var(--indigo); font-size:14px; font-weight:700;
+  }
+  .btn-copy:hover{ background: var(--indigo); color:#fff; }
+  .summary-textarea{
+    width:100%; height:260px; padding:12px; border:1.5px solid var(--rule); border-radius:8px;
+    background:#fff; font-size:12.5px; line-height:1.7; resize:vertical;
+    font-family:'Noto Sans JP','Hiragino Sans',sans-serif; color:var(--ink);
+    box-sizing:border-box;
+  }
+  .advice-result{
+    margin-top:14px; padding:14px 16px; border-radius:10px;
+    background: var(--paper); border:1px solid var(--rule);
+    font-size:14px; line-height:1.7; white-space:pre-wrap;
+  }
+  .advice-result.loading{ color:var(--ink-soft); }
+  .advice-result.error{ color:var(--vermillion); }
+  .advice-result .advice-stamp{
+    display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--ink-soft);
+    margin-bottom:8px; font-family:'Shippori Mincho',serif;
+  }
+
+  /* ---------- Recurring (fixed-cost) tab ---------- */
+  .recurring-header{
+    display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-bottom:4px; padding-bottom:10px; border-bottom:1px solid var(--rule);
+  }
+  .recurring-header h2{ border-bottom:none; padding-bottom:0; margin-bottom:0; }
+  .btn-text-inline{ background:none; border:none; color:var(--indigo); font-size:12.5px; text-decoration:underline; white-space:nowrap; }
+  .recurring-list{ margin-top:14px; }
+  .recurring-row{ border:1px solid var(--rule); border-radius:10px; padding:14px; margin-bottom:12px; background:#fff; }
+  .recurring-row:last-child{ margin-bottom:0; }
+  .recurring-row-top{ display:flex; gap:8px; margin-bottom:10px; }
+  .recurring-row-top select{ flex:1; padding:9px; border:1.5px solid var(--rule); border-radius:7px; background:#fff; font-size:13.5px; min-width:0; }
+  .recurring-row-top .rec-delete-btn{ background:none; border:1px solid var(--rule); border-radius:7px; padding:9px 12px; font-size:12px; color:var(--vermillion); flex-shrink:0; }
+  .recurring-row-mid{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .rec-field{ display:flex; align-items:center; gap:4px; flex:0 0 108px; }
+  .rec-field span{ color:var(--ink-soft); font-size:13px; }
+  .rec-field input{ width:100%; padding:8px 10px; border:1.5px solid var(--rule); border-radius:7px; font-variant-numeric: tabular-nums; }
+  .recurring-row-mid .rec-memo{ flex:1; min-width:120px; padding:8px 10px; border:1.5px solid var(--rule); border-radius:7px; }
+  .rec-day{ display:flex; align-items:center; gap:4px; flex:0 0 72px; }
+  .rec-day input{ width:48px; padding:8px 6px; border:1.5px solid var(--rule); border-radius:7px; text-align:center; }
+  .rec-day span{ font-size:12.5px; color:var(--ink-soft); }
+  .recurring-row-bottom{ display:flex; justify-content:flex-end; }
+  .rec-status.reflected{ font-size:12.5px; color:var(--moss); font-weight:700; }
+  .rec-reflect-btn{ background: var(--indigo); color:#fff; border:none; border-radius:7px; padding:9px 14px; font-size:12.5px; font-weight:700; }
+  .rec-reflect-btn:hover{ background: var(--indigo-light); }
+
+  /* ---------- Category management tab ---------- */
+  .category-list{ margin-bottom:14px; }
+  .category-row{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px dashed var(--rule); }
+  .category-row:last-child{ border-bottom:none; }
+  .category-name-input{
+    flex:1; padding:10px 12px; border:1.5px solid var(--rule); border-radius:8px;
+    background:#fff; color:var(--ink); font-size:14.5px;
+  }
+  .category-name-input:focus{ border-color: var(--indigo-pale); }
+  .cat-delete-btn{
+    background:none; border:1px solid var(--rule); border-radius:7px; padding:9px 12px;
+    font-size:12.5px; color:var(--vermillion); flex-shrink:0; min-height:40px;
+  }
+  .cat-delete-btn:hover{ background:var(--paper); border-color:var(--vermillion); }
+  .category-add-row{ display:flex; gap:8px; padding-top:10px; border-top:1px solid var(--rule); }
+  .category-add-input{
+    flex:1; padding:10px 12px; border:1.5px solid var(--rule); border-radius:8px;
+    background:#fff; font-size:14.5px;
+  }
+  .cat-add-btn{
+    background: var(--indigo); color:#fff; border:none; border-radius:8px;
+    padding:0 16px; font-size:13.5px; font-weight:700; min-height:42px; flex-shrink:0;
+  }
+  .cat-add-btn:hover{ background: var(--indigo-light); }
+
+  /* ---------- Data drawer ---------- */
+  .drawer-overlay{
+    display:none; position:fixed; inset:0; background:rgba(43,38,32,0.45); z-index:50;
+    align-items:flex-end; justify-content:center;
+  }
+  .drawer-overlay.open{ display:flex; }
+  .drawer{
+    background: var(--paper); width:100%; max-width:480px; border-radius:14px 14px 0 0;
+    padding:22px 22px 28px; box-shadow:0 -4px 20px rgba(0,0,0,0.2);
+    max-height:85vh; overflow-y:auto;
+  }
+  .drawer h3{ font-size:17px; margin-bottom:4px; }
+  .drawer p.hint{ font-size:12.5px; color:var(--ink-soft); margin:0 0 16px; }
+  .drawer-actions{ display:flex; flex-direction:column; gap:10px; }
+  .drawer-actions button, .drawer-actions label{
+    display:block; width:100%; padding:13px; border-radius:8px; text-align:center;
+    border:1.5px solid var(--rule); background:#fff; font-size:14px; font-weight:500;
+  }
+  .drawer-actions .danger{ border-color:var(--vermillion); color:var(--vermillion); }
+  .drawer-section{ margin-top:20px; padding-top:16px; border-top:1px solid var(--rule); }
+  .drawer-section h4{ font-family:'Shippori Mincho',serif; font-size:14.5px; margin:0 0 6px; color:var(--ink); }
+  .drawer-section .field input{
+    width:100%; padding:11px 12px; border:1.5px solid var(--rule); border-radius:8px; background:#fff; font-size:13.5px;
+  }
+  .drawer-section #saveWorkerSettings{
+    width:100%; padding:12px; border:none; border-radius:8px; background: var(--indigo); color:#fff;
+    font-size:13.5px; font-weight:700; margin-top:4px;
+  }
+  .drawer-section #saveWorkerSettings:hover{ background: var(--indigo-light); }
+  .drawer-close{ background:none; border:none; color:var(--ink-soft); font-size:13px; margin-top:14px; width:100%; text-decoration:underline; }
+  #importFile{ display:none; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(10px);
+    background:var(--indigo); color:#fff; padding:11px 22px; border-radius:24px;
+    font-size:13px; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:60;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (max-width:600px){
+    table.ledger thead{ display:none; }
+    table.ledger tr{ display:block; border-bottom:1px solid var(--rule); padding:10px 0; }
+    table.ledger td{ display:flex; justify-content:space-between; border-bottom:none; padding:3px 0; }
+    table.ledger td.num{ text-align:right; }
+    table.ledger td.cat::before{ content:'カテゴリ'; color:var(--ink-soft); font-size:11px; }
+    table.ledger td.num::before{ content:'金額'; color:var(--ink-soft); font-size:11px; }
+    table.ledger td.memo-cell::before{ content:'メモ'; color:var(--ink-soft); font-size:11px; }
+    table.ledger td.date-cell::before{ content:'日付'; color:var(--ink-soft); font-size:11px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="seal">簿</div>
+        <div>
+          <h1>家計簿</h1>
+          <p>かけいぼ・きろく</p>
+        </div>
+      </div>
+      <div class="month-nav">
+        <button id="prevMonth" aria-label="前の月">‹</button>
+        <span class="month-label" id="monthLabel">2026年6月</span>
+        <button id="nextMonth" aria-label="次の月">›</button>
+      </div>
+    </div>
+    <button class="data-link" id="openDrawer">データのバックアップ・復元</button>
+    <nav class="tabs">
+      <button data-tab="input" class="active">入力</button>
+      <button data-tab="list">一覧</button>
+      <button data-tab="analysis">分析</button>
+      <button data-tab="budget">予算</button>
+      <button data-tab="recurring">固定費</button>
+      <button data-tab="categories">カテゴリ管理</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 入力タブ -->
+    <section class="panel active" id="panel-input">
+      <div class="card">
+        <h2 id="formTitle">記録する</h2>
+        <form id="entryForm">
+          <input type="hidden" id="editingId" value="">
+          <div class="receipt-scan-row">
+            <input type="file" accept="image/*" capture="environment" id="receiptCapture" style="display:none;">
+            <button type="button" class="btn-camera" id="receiptScanBtn">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span>レシートを撮影してAIで読み取る</span>
+            </button>
+            <p class="receipt-hint">金額・店名・カテゴリを自動入力します（保存前に内容をご確認ください）</p>
+          </div>
+          <div class="type-toggle">
+            <button type="button" data-type="expense" class="selected">支出</button>
+            <button type="button" data-type="income">収入</button>
+          </div>
+          <div class="field">
+            <label for="f-date">日付</label>
+            <input type="date" id="f-date" required>
+          </div>
+          <div class="field">
+            <label for="f-category">カテゴリ</label>
+            <select id="f-category" required></select>
+          </div>
+          <div class="field">
+            <label for="f-amount">金額</label>
+            <div class="amount-row">
+              <span>¥</span>
+              <input type="number" id="f-amount" min="0" step="1" inputmode="numeric" placeholder="0" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-memo">メモ（任意）</label>
+            <input type="text" id="f-memo" maxlength="60" placeholder="例：友人とランチ">
+          </div>
+          <button type="submit" class="btn-primary" id="submitBtn">記録する</button>
+          <button type="button" class="btn-text" id="cancelEdit" style="display:none;">編集をやめる</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>最近の記録</h2>
+        <div class="recent-list" id="recentList"></div>
+      </div>
+    </section>
+
+    <!-- 一覧タブ -->
+    <section class="panel" id="panel-list">
+      <div class="card">
+        <h2>取引一覧</h2>
+        <div class="filters">
+          <select id="filterType">
+            <option value="all">すべての種別</option>
+            <option value="expense">支出のみ</option>
+            <option value="income">収入のみ</option>
+          </select>
+          <select id="filterCategory">
+            <option value="all">すべてのカテゴリ</option>
+          </select>
+        </div>
+        <div id="listContent"></div>
+      </div>
+    </section>
+
+    <!-- 分析タブ -->
+    <section class="panel" id="panel-analysis">
+      <div class="summary-cards">
+        <div class="summary-card income">
+          <div class="label">収入合計</div>
+          <div class="value" id="sumIncome">¥0</div>
+        </div>
+        <div class="summary-card expense">
+          <div class="label">支出合計</div>
+          <div class="value" id="sumExpense">¥0</div>
+        </div>
+        <div class="summary-card balance">
+          <div class="label">残高</div>
+          <div class="value" id="sumBalance">¥0</div>
+        </div>
+      </div>
+
+      <div class="card gauge-card">
+        <h2>今月の予算消化（全体）</h2>
+        <div id="overallGaugeWrap"></div>
+      </div>
+
+      <div class="card ai-advice-card">
+        <h2>AIからのアドバイス</h2>
+        <p class="hint">今月の収支と予算の状況をもとに、Claudeが一言アドバイスします。ボタンを押したときだけ生成されるので、使いすぎる心配はありません。</p>
+        <button type="button" class="btn-primary" id="generateAdviceBtn">アドバイスを生成する</button>
+        <div id="adviceResult" class="advice-result" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h2>カテゴリ別支出</h2>
+        <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
+        <div class="legend-list" id="categoryLegend"></div>
+      </div>
+
+      <div class="card">
+        <h2>収支の推移（直近6か月）</h2>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+
+      <div class="card ai-export-card">
+        <h2>ClaudeやChatGPTに相談する</h2>
+        <p class="hint">今月の家計データをまとめたテキストを生成します。コピーしてClaudeやChatGPTに貼り付けるだけでアドバイスがもらえます。</p>
+        <button type="button" class="btn-primary" id="genSummaryBtn">相談用データをまとめる</button>
+      </div>
+    </section>
+
+    <!-- 予算タブ -->
+    <section class="panel" id="panel-budget">
+      <div class="card">
+        <h2>カテゴリ別予算</h2>
+        <p class="hint" style="color:var(--ink-soft); font-size:12.5px; margin:-8px 0 16px;">月ごとの予算額を入力すると、使用状況がリアルタイムで表示されます。</p>
+        <div id="budgetList"></div>
+        <button type="button" class="btn-primary" id="saveBudget" style="margin-top:14px;">予算を保存する</button>
+      </div>
+    </section>
+
+    <!-- 固定費タブ -->
+    <section class="panel" id="panel-recurring"></section>
+
+    <!-- カテゴリ管理タブ -->
+    <section class="panel" id="panel-categories"></section>
+  </main>
+</div>
+
+<div class="drawer-overlay" id="summaryOverlay">
+  <div class="drawer summary-drawer">
+    <h3>相談用データ</h3>
+    <p class="hint">このテキストをコピーして、ClaudeやChatGPTに貼り付けてください。</p>
+    <div class="summary-actions">
+      <button type="button" class="btn-copy" id="copyBtn">📋 クリップボードにコピー</button>
+    </div>
+    <textarea id="summaryText" class="summary-textarea" readonly></textarea>
+    <button type="button" class="drawer-close" id="closeSummary">閉じる</button>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay">
+  <div class="drawer">
+    <h3>データのバックアップ・復元</h3>
+    <p class="hint">このアプリのデータはブラウザ内に保存されています。機種変更や引っ越し（GitHub Pagesなど）の際は、書き出したファイルを使って復元できます。</p>
+    <div class="drawer-actions">
+      <button type="button" id="exportBtn">データを書き出す（JSON）</button>
+      <label for="importFile">データを読み込む（JSON）</label>
+      <input type="file" id="importFile" accept="application/json">
+      <button type="button" class="danger" id="clearBtn">すべてのデータを削除する</button>
+    </div>
+
+    <div class="drawer-section">
+      <h4>AI機能のプロキシ設定</h4>
+      <p class="hint">GitHub Pagesなど、Claude.aiの外でAIアドバイス・レシート読み取りを使うには、ご自身で用意したプロキシ（Cloudflare Workersなど）のURLを設定してください。空欄のままなら、このチャット内でのみ無料で動作します。</p>
+      <div class="field"><label for="workerUrlInput">プロキシURL</label><input type="text" id="workerUrlInput" placeholder="https://xxxx.workers.dev"></div>
+      <div class="field"><label for="proxySecretInput">合言葉（任意・推奨）</label><input type="text" id="proxySecretInput" placeholder="プロキシ側で設定した文字列と同じもの"></div>
+      <button type="button" id="saveWorkerSettings">プロキシ設定を保存する</button>
+    </div>
+
+    <button type="button" class="drawer-close" id="closeDrawer">閉じる</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var DEFAULT_EXPENSE_CATEGORIES = ['食費','日用品','住居費','交通費','通信費','趣味・娯楽','衣服・美容','医療費','教育','その他'];
+  var DEFAULT_INCOME_CATEGORIES = ['給料','副業','臨時収入','その他'];
+  var BASE_CATEGORY_COLORS = {
+    '食費':'#C1432D','日用品':'#B5791F','住居費':'#3D6B8A','交通費':'#5C7A5E',
+    '通信費':'#7A5C8A','趣味・娯楽':'#A4654A','衣服・美容':'#B05C7A','医療費':'#8A8A4A',
+    '教育':'#4A6B5C','その他':'#5C5C7A'
+  };
+  var COLOR_PALETTE = ['#C1432D','#B5791F','#3D6B8A','#5C7A5E','#7A5C8A','#A4654A','#B05C7A','#8A8A4A','#4A6B5C','#5C5C7A','#2E6F6E','#9C5B2E','#5B6F2E','#6E2E5B'];
+  function colorForCategory(name){
+    if(BASE_CATEGORY_COLORS[name]) return BASE_CATEGORY_COLORS[name];
+    var hash = 0;
+    for(var i=0;i<name.length;i++){ hash = (hash*31 + name.charCodeAt(i)) >>> 0; }
+    return COLOR_PALETTE[hash % COLOR_PALETTE.length];
+  }
+
+  var STORE_TX         = 'kakeibo_v1_transactions';
+  var STORE_BUDGET     = 'kakeibo_v1_budgets';
+  var STORE_CATEGORIES = 'kakeibo_v1_categories';
+  var STORE_RECURRING  = 'kakeibo_v1_recurring';
+  var STORE_WORKER_URL = 'kakeibo_v1_worker_url';
+  var STORE_PROXY_SECRET = 'kakeibo_v1_proxy_secret';
+
+  function loadJSON(key, fallback){
+    try{ var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch(e){ return fallback; }
+  }
+
+  var state = {
+    transactions: loadJSON(STORE_TX, []),
+    budgets:      loadJSON(STORE_BUDGET, {}),
+    categories:   loadJSON(STORE_CATEGORIES, { expense: DEFAULT_EXPENSE_CATEGORIES.slice(), income: DEFAULT_INCOME_CATEGORIES.slice() }),
+    recurring:    loadJSON(STORE_RECURRING, []),
+    workerUrl:    localStorage.getItem(STORE_WORKER_URL) || '',
+    proxySecret:  localStorage.getItem(STORE_PROXY_SECRET) || '',
+    currentMonth: ym(new Date()),
+    activeType:   'expense',
+    activeTab:    'input'
+  };
+
+  function saveTransactions(){ localStorage.setItem(STORE_TX,         JSON.stringify(state.transactions)); }
+  function saveBudgets(){      localStorage.setItem(STORE_BUDGET,     JSON.stringify(state.budgets)); }
+  function saveCategories(){   localStorage.setItem(STORE_CATEGORIES, JSON.stringify(state.categories)); }
+  function saveRecurring(){    localStorage.setItem(STORE_RECURRING,  JSON.stringify(state.recurring)); }
+
+  /* ---------- AI endpoint helper ---------- */
+  function aiEndpoint(){ return state.workerUrl || 'https://api.anthropic.com/v1/messages'; }
+  function aiHeaders(){
+    var headers = { 'Content-Type': 'application/json' };
+    if(state.workerUrl && state.proxySecret){ headers['x-proxy-secret'] = state.proxySecret; }
+    return headers;
+  }
+  function aiFailureMessage(){
+    return state.workerUrl
+      ? 'プロキシへの接続に失敗しました。プロキシURL・合言葉・通信環境をご確認ください。'
+      : 'AI機能はこのチャット内でのみすぐに使えます。GitHub Pagesなどで使うには、データのバックアップ画面からプロキシURLを設定してください。';
+  }
+
+  function ym(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+  function monthLabel(ymStr){
+    var parts = ymStr.split('-');
+    return parts[0] + '年' + parseInt(parts[1],10) + '月';
+  }
+  function yen(n){ return '¥' + Math.round(n).toLocaleString('ja-JP'); }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function uid(){ return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  /* ---------- Tabs ---------- */
+  var tabButtons = document.querySelectorAll('nav.tabs button');
+  tabButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      state.activeTab = btn.dataset.tab;
+      tabButtons.forEach(function(b){ b.classList.toggle('active', b === btn); });
+      document.querySelectorAll('.panel').forEach(function(p){
+        p.classList.toggle('active', p.id === 'panel-' + btn.dataset.tab);
+      });
+      renderActiveTab();
+    });
+  });
+
+  /* ---------- Month nav ---------- */
+  document.getElementById('prevMonth').addEventListener('click', function(){ shiftMonth(-1); });
+  document.getElementById('nextMonth').addEventListener('click', function(){ shiftMonth(1); });
+  function shiftMonth(delta){
+    var parts = state.currentMonth.split('-').map(Number);
+    var d = new Date(parts[0], parts[1]-1+delta, 1);
+    state.currentMonth = ym(d);
+    document.getElementById('monthLabel').textContent = monthLabel(state.currentMonth);
+    renderActiveTab();
+  }
+  document.getElementById('monthLabel').textContent = monthLabel(state.currentMonth);
+
+  /* ---------- Entry form ---------- */
+  var typeButtons = document.querySelectorAll('.type-toggle button');
+  typeButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      state.activeType = btn.dataset.type;
+      typeButtons.forEach(function(b){ b.classList.toggle('selected', b === btn); });
+      populateCategorySelect();
+    });
+  });
+
+  function populateCategorySelect(){
+    var sel = document.getElementById('f-category');
+    var current = sel.value;
+    var cats = state.categories[state.activeType];
+    sel.innerHTML = cats.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+    if(cats.indexOf(current) !== -1) sel.value = current;
+  }
+  populateCategorySelect();
+  document.getElementById('f-date').value = todayStr();
+
+  /* ---------- Receipt scan (camera + AI) ---------- */
+  function resizeImageToBase64(file, maxDim, quality){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var w = img.width, h = img.height;
+          if(w > h && w > maxDim){ h = Math.round(h * (maxDim/w)); w = maxDim; }
+          else if(h >= w && h > maxDim){ w = Math.round(w * (maxDim/h)); h = maxDim; }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
+        };
+        img.onerror = function(){ reject(new Error('image load failed')); };
+        img.src = reader.result;
+      };
+      reader.onerror = function(){ reject(new Error('file read failed')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function scanReceipt(file){
+    var btn = document.getElementById('receiptScanBtn');
+    var labelEl = btn.querySelector('span');
+    var originalLabel = labelEl.textContent;
+    btn.disabled = true;
+    labelEl.textContent = '読み取り中…';
+
+    resizeImageToBase64(file, 1024, 0.7).then(function(base64){
+      var promptText =
+        'この日本のレシートまたは購入時の画像を読み取り、次のJSON形式のみで回答してください。前置き、説明、コードブロックの記号は一切含めないでください。\n' +
+        '{"amount": 合計金額（税込・数値のみ。読み取れなければnull）, "store": "店名や品目（読み取れなければnull）", "category": "次の一覧から最も当てはまるものを1つだけ選び、その文字列をそのまま記入。当てはまるものがなければ「その他」。一覧：' + state.categories.expense.join('、') + '"}';
+      return fetch(aiEndpoint(), {
+        method: 'POST',
+        headers: aiHeaders(),
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+              { type: 'text', text: promptText }
+            ]
+          }]
+        })
+      });
+    }).then(function(response){
+      if(!response.ok) throw new Error('request failed');
+      return response.json();
+    }).then(function(data){
+      var textBlocks = (data.content || []).filter(function(b){ return b.type === 'text'; }).map(function(b){ return b.text; });
+      var raw = textBlocks.join('').trim().replace(/```json|```/g, '').trim();
+      var parsed = JSON.parse(raw);
+
+      state.activeType = 'expense';
+      typeButtons.forEach(function(b){ b.classList.toggle('selected', b.dataset.type === 'expense'); });
+      populateCategorySelect();
+
+      if(parsed.amount){ document.getElementById('f-amount').value = Math.round(parsed.amount); }
+      if(parsed.store){ document.getElementById('f-memo').value = parsed.store; }
+      if(parsed.category && state.categories.expense.indexOf(parsed.category) !== -1){
+        document.getElementById('f-category').value = parsed.category;
+      }
+      showToast('AIが読み取りました。内容を確認して保存してください');
+    }).catch(function(){
+      showToast(aiFailureMessage());
+    }).finally(function(){
+      btn.disabled = false;
+      labelEl.textContent = originalLabel;
+    });
+  }
+
+  document.getElementById('receiptScanBtn').addEventListener('click', function(){
+    document.getElementById('receiptCapture').click();
+  });
+  document.getElementById('receiptCapture').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(file) scanReceipt(file);
+    e.target.value = '';
+  });
+
+  var entryForm = document.getElementById('entryForm');
+  entryForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var amount = parseFloat(document.getElementById('f-amount').value);
+    if(!amount || amount <= 0){ showToast('金額を正しく入力してください'); return; }
+    var editingId = document.getElementById('editingId').value;
+    var record = {
+      id: editingId || uid(),
+      date: document.getElementById('f-date').value,
+      type: state.activeType,
+      category: document.getElementById('f-category').value,
+      amount: amount,
+      memo: document.getElementById('f-memo').value.trim(),
+      createdAt: editingId ? (state.transactions.find(function(t){return t.id===editingId;})||{}).createdAt || Date.now() : Date.now()
+    };
+    if(editingId){
+      var idx = state.transactions.findIndex(function(t){ return t.id === editingId; });
+      if(idx > -1) state.transactions[idx] = record;
+      showToast('記録を更新しました');
+    }else{
+      state.transactions.push(record);
+      showToast('記録しました');
+    }
+    saveTransactions();
+    resetForm();
+    renderActiveTab();
+  });
+
+  function resetForm(){
+    document.getElementById('editingId').value = '';
+    document.getElementById('formTitle').textContent = '記録する';
+    document.getElementById('submitBtn').textContent = '記録する';
+    document.getElementById('cancelEdit').style.display = 'none';
+    document.getElementById('f-amount').value = '';
+    document.getElementById('f-memo').value = '';
+    document.getElementById('f-date').value = todayStr();
+  }
+  document.getElementById('cancelEdit').addEventListener('click', resetForm);
+
+  function startEdit(tx){
+    state.activeType = tx.type;
+    typeButtons.forEach(function(b){ b.classList.toggle('selected', b.dataset.type === tx.type); });
+    populateCategorySelect();
+    document.getElementById('editingId').value = tx.id;
+    document.getElementById('f-date').value = tx.date;
+    document.getElementById('f-category').value = tx.category;
+    document.getElementById('f-amount').value = tx.amount;
+    document.getElementById('f-memo').value = tx.memo || '';
+    document.getElementById('formTitle').textContent = '記録を編集する';
+    document.getElementById('submitBtn').textContent = '更新する';
+    document.getElementById('cancelEdit').style.display = 'block';
+    document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === 'input'); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-input'); });
+    state.activeTab = 'input';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function deleteTx(id){
+    if(!confirm('この記録を削除しますか？')) return;
+    state.transactions = state.transactions.filter(function(t){ return t.id !== id; });
+    saveTransactions();
+    renderActiveTab();
+    showToast('削除しました');
+  }
+
+  /* ---------- Recent list (input tab) ---------- */
+  function renderRecent(){
+    var sorted = state.transactions.slice().sort(function(a,b){
+      if(a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return (b.createdAt||0) - (a.createdAt||0);
+    }).slice(0,5);
+    var el = document.getElementById('recentList');
+    if(sorted.length === 0){
+      el.innerHTML = '<p style="color:var(--ink-soft); font-size:13.5px;">まだ記録がありません。上のフォームから最初の記録を追加しましょう。</p>';
+      return;
+    }
+    el.innerHTML = sorted.map(function(t){
+      var d = t.date.slice(5).replace('-','/');
+      var sign = t.type === 'income' ? '+' : '-';
+      return '<div class="row"><div><div>'+t.category+(t.memo? ' <span class="rl-meta">・'+escapeHtml(t.memo)+'</span>':'')+'</div><div class="rl-meta">'+d+'</div></div><div class="rl-amount '+t.type+'">'+sign+yen(t.amount)+'</div></div>';
+    }).join('');
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ---------- List tab ---------- */
+  function populateFilterCategory(){
+    var sel = document.getElementById('filterCategory');
+    var current = sel.value;
+    var all = state.categories.expense.concat(state.categories.income);
+    var unique = all.filter(function(c, i){ return all.indexOf(c) === i; });
+    sel.innerHTML = '<option value="all">すべてのカテゴリ</option>' + unique.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+    sel.value = current || 'all';
+  }
+  populateFilterCategory();
+  document.getElementById('filterType').addEventListener('change', renderList);
+  document.getElementById('filterCategory').addEventListener('change', renderList);
+
+  function renderList(){
+    var typeFilter = document.getElementById('filterType').value;
+    var catFilter = document.getElementById('filterCategory').value;
+    var monthTx = state.transactions.filter(function(t){ return t.date.slice(0,7) === state.currentMonth; });
+    var filtered = monthTx.filter(function(t){
+      if(typeFilter !== 'all' && t.type !== typeFilter) return false;
+      if(catFilter !== 'all' && t.category !== catFilter) return false;
+      return true;
+    }).sort(function(a,b){
+      if(a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return (b.createdAt||0) - (a.createdAt||0);
+    });
+
+    var content = document.getElementById('listContent');
+    if(filtered.length === 0){
+      content.innerHTML = '<div class="empty-state"><div class="seal">簿</div><p>'+(monthTx.length===0 ? 'この月の記録はまだありません。' : '条件に合う記録がありません。')+'</p></div>';
+      return;
+    }
+
+    var rows = filtered.map(function(t){
+      var d = t.date.slice(5).replace('-','/');
+      var sign = t.type === 'income' ? '+' : '-';
+      return '<tr>'+
+        '<td class="date-cell">'+d+'</td>'+
+        '<td class="cat">'+t.category+'</td>'+
+        '<td class="num '+t.type+'">'+sign+yen(t.amount)+'</td>'+
+        '<td class="memo-cell">'+(t.memo ? escapeHtml(t.memo) : '—')+'</td>'+
+        '<td><div class="row-actions">'+
+          '<button type="button" data-action="edit" data-id="'+t.id+'">編集</button>'+
+          '<button type="button" data-action="delete" data-id="'+t.id+'">削除</button>'+
+        '</div></td>'+
+      '</tr>';
+    }).join('');
+
+    var totalIncome = filtered.filter(function(t){return t.type==='income';}).reduce(function(s,t){return s+t.amount;},0);
+    var totalExpense = filtered.filter(function(t){return t.type==='expense';}).reduce(function(s,t){return s+t.amount;},0);
+
+    content.innerHTML =
+      '<table class="ledger"><thead><tr><th>日付</th><th>カテゴリ</th><th style="text-align:right;">金額</th><th>メモ</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'+
+      '<div class="totals-bar">'+
+        '<div><div class="label">表示中の収入</div><div class="value" style="color:var(--moss);">'+yen(totalIncome)+'</div></div>'+
+        '<div><div class="label">表示中の支出</div><div class="value" style="color:var(--vermillion);">'+yen(totalExpense)+'</div></div>'+
+        '<div><div class="label">差額</div><div class="value" style="color:var(--indigo);">'+yen(totalIncome-totalExpense)+'</div></div>'+
+      '</div>';
+
+    content.querySelectorAll('button[data-action]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.dataset.id;
+        if(btn.dataset.action === 'edit'){
+          var tx = state.transactions.find(function(t){ return t.id === id; });
+          if(tx) startEdit(tx);
+        }else{
+          deleteTx(id);
+        }
+      });
+    });
+  }
+
+  /* ---------- Water-level gauge helper ---------- */
+  function tankGaugeSVG(percent, status, opts){
+    opts = opts || {};
+    var w = opts.width || 70, h = opts.height || 100;
+    var id = opts.id || ('g' + Math.random().toString(36).slice(2,8));
+    var clamped = percent === null ? 0 : Math.max(0, Math.min(100, percent));
+    var top = 8, bottom = h - 8;
+    var usableH = bottom - top;
+    var waterY = bottom - (clamped/100) * usableH;
+    var color = status === 'over' ? 'var(--vermillion)' : status === 'warn' ? 'var(--amber)' : status === 'ok' ? 'var(--moss)' : 'var(--rule)';
+    var x0 = 4, waveWidth = w - 8;
+    var wavePath = 'M'+x0+','+waterY+
+      ' Q'+(x0+waveWidth*0.125)+','+(waterY-4)+' '+(x0+waveWidth*0.25)+','+waterY+
+      ' T'+(x0+waveWidth*0.5)+','+waterY+
+      ' T'+(x0+waveWidth*0.75)+','+waterY+
+      ' T'+(x0+waveWidth)+','+waterY+
+      ' L'+(x0+waveWidth)+','+bottom+' L'+x0+','+bottom+' Z';
+    return (
+      '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="使用率 '+(percent===null?'未設定':clamped+'%')+'">'+
+        '<defs><clipPath id="clip-'+id+'"><rect x="2" y="8" width="'+(w-4)+'" height="'+(h-16)+'" rx="10"/></clipPath></defs>'+
+        (percent !== null ? '<g clip-path="url(#clip-'+id+')"><path d="'+wavePath+'" fill="'+color+'" opacity="0.85"/></g>' : '')+
+        '<rect x="2" y="8" width="'+(w-4)+'" height="'+(h-16)+'" rx="10" fill="none" stroke="var(--rule)" stroke-width="2.5"/>'+
+      '</svg>'
+    );
+  }
+
+  /* ---------- Analysis tab ---------- */
+  var categoryChart = null, trendChart = null;
+
+  function renderAnalysis(){
+    var monthTx = state.transactions.filter(function(t){ return t.date.slice(0,7) === state.currentMonth; });
+    var income = monthTx.filter(function(t){return t.type==='income';}).reduce(function(s,t){return s+t.amount;},0);
+    var expense = monthTx.filter(function(t){return t.type==='expense';}).reduce(function(s,t){return s+t.amount;},0);
+
+    document.getElementById('sumIncome').textContent = yen(income);
+    document.getElementById('sumExpense').textContent = yen(expense);
+    document.getElementById('sumBalance').textContent = yen(income-expense);
+
+    var byCategory = {};
+    monthTx.filter(function(t){return t.type==='expense';}).forEach(function(t){
+      byCategory[t.category] = (byCategory[t.category]||0) + t.amount;
+    });
+
+    var totalBudget = 0, totalBudgetSpent = 0;
+    Object.keys(state.budgets).forEach(function(cat){
+      totalBudget += state.budgets[cat];
+      totalBudgetSpent += (byCategory[cat] || 0);
+    });
+    var overallPercent = totalBudget > 0 ? Math.round(totalBudgetSpent/totalBudget*100) : null;
+    var overallStatus = statusFor(overallPercent);
+    var overallWrap = document.getElementById('overallGaugeWrap');
+    if(totalBudget === 0){
+      overallWrap.innerHTML = '<p class="gauge-empty">予算タブでカテゴリ別の予算を設定すると、ここに全体の消化状況が表示されます。</p>';
+    }else{
+      overallWrap.innerHTML =
+        '<div class="gauge-overall">'+
+          tankGaugeSVG(overallPercent, overallStatus, {width:96, height:130, id:'overall'})+
+          '<div class="gauge-figures">'+
+            '<div class="pct">'+overallPercent+'%</div>'+
+            '<div>使用 '+yen(totalBudgetSpent)+' ／ 予算 '+yen(totalBudget)+'</div>'+
+          '</div>'+
+          (overallStatus ? '<span class="stamp-mini '+overallStatus+'">'+STATUS_LABEL[overallStatus]+'</span>' : '')+
+        '</div>';
+    }
+
+    var catLabels = Object.keys(byCategory).filter(function(k){ return byCategory[k] > 0; })
+      .sort(function(a,b){ return byCategory[b]-byCategory[a]; });
+    var catData = catLabels.map(function(k){ return byCategory[k]; });
+    var catColors = catLabels.map(function(k){ return colorForCategory(k); });
+
+    var ctx1 = document.getElementById('categoryChart').getContext('2d');
+    if(categoryChart) categoryChart.destroy();
+    if(catLabels.length === 0){
+      document.getElementById('categoryChart').style.display = 'none';
+      document.getElementById('categoryLegend').innerHTML = '<p style="color:var(--ink-soft); font-size:13px;">この月の支出記録がありません。</p>';
+    }else{
+      document.getElementById('categoryChart').style.display = 'block';
+      categoryChart = new Chart(ctx1, {
+        type: 'doughnut',
+        data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: catColors, borderColor: '#FCF9EF', borderWidth: 2 }] },
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          plugins: { legend: { display:false }, tooltip: { callbacks: { label: function(ctx){ return ctx.label + '：' + yen(ctx.parsed); } } } }
+        }
+      });
+      document.getElementById('categoryLegend').innerHTML = catLabels.map(function(k,i){
+        var pct = expense > 0 ? Math.round(byCategory[k]/expense*100) : 0;
+        return '<span><span class="dot" style="background:'+catColors[i]+';"></span>'+k+' '+yen(byCategory[k])+'（'+pct+'%）</span>';
+      }).join('');
+    }
+
+    var months = [];
+    var parts = state.currentMonth.split('-').map(Number);
+    for(var i=5;i>=0;i--){
+      var d = new Date(parts[0], parts[1]-1-i, 1);
+      months.push(ym(d));
+    }
+    var incomeSeries = months.map(function(m){
+      return state.transactions.filter(function(t){ return t.date.slice(0,7)===m && t.type==='income'; }).reduce(function(s,t){return s+t.amount;},0);
+    });
+    var expenseSeries = months.map(function(m){
+      return state.transactions.filter(function(t){ return t.date.slice(0,7)===m && t.type==='expense'; }).reduce(function(s,t){return s+t.amount;},0);
+    });
+    var monthLabels = months.map(function(m){ var p = m.split('-'); return p[0].slice(2)+'/'+parseInt(p[1],10); });
+
+    var ctx2 = document.getElementById('trendChart').getContext('2d');
+    if(trendChart) trendChart.destroy();
+    trendChart = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: monthLabels,
+        datasets: [
+          { label:'収入', data: incomeSeries, backgroundColor: '#5C7A5E', borderRadius:4 },
+          { label:'支出', data: expenseSeries, backgroundColor: '#C1432D', borderRadius:4 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        scales: { y: { beginAtZero:true, ticks:{ callback:function(v){ return yen(v); } } } },
+        plugins: { legend: { position:'bottom', labels:{ boxWidth:10 } },
+          tooltip: { callbacks: { label:function(ctx){ return ctx.dataset.label+'：'+yen(ctx.parsed.y); } } } }
+      }
+    });
+  }
+
+  /* ---------- AI advice ---------- */
+  function buildAdvicePrompt(){
+    var monthTx = state.transactions.filter(function(t){ return t.date.slice(0,7) === state.currentMonth; });
+    var income = monthTx.filter(function(t){return t.type==='income';}).reduce(function(s,t){return s+t.amount;},0);
+    var expense = monthTx.filter(function(t){return t.type==='expense';}).reduce(function(s,t){return s+t.amount;},0);
+    var byCategory = {};
+    monthTx.filter(function(t){return t.type==='expense';}).forEach(function(t){
+      byCategory[t.category] = (byCategory[t.category]||0) + t.amount;
+    });
+    var categoryLines = Object.keys(byCategory).sort(function(a,b){ return byCategory[b]-byCategory[a]; }).map(function(cat){
+      var budget = state.budgets[cat];
+      var line = '- ' + cat + '：' + Math.round(byCategory[cat]) + '円';
+      if(budget){
+        var pct = Math.round(byCategory[cat]/budget*100);
+        line += '（予算' + budget + '円のうち' + pct + '%使用）';
+      }
+      return line;
+    }).join('\n');
+
+    return (
+      'あなたは家計簿アプリ内のやさしいファイナンシャルコーチです。以下は利用者の' + monthLabel(state.currentMonth) + 'の家計データです。\n\n' +
+      '収入合計：' + Math.round(income) + '円\n' +
+      '支出合計：' + Math.round(expense) + '円\n' +
+      '残高：' + Math.round(income-expense) + '円\n\n' +
+      'カテゴリ別支出：\n' + (categoryLines || '（記録なし）') + '\n\n' +
+      'このデータをもとに、利用者が今月をより良く過ごすための具体的なアドバイスを日本語で3つ、それぞれ1文程度で簡潔に挙げてください。' +
+      '説教っぽくならないよう、やさしく前向きなトーンでお願いします。投資や具体的な金融商品の推奨は行わず、日々の使い方や予算の調整など実用的な範囲にとどめてください。' +
+      '出力は番号付きの3行のみで、前置きや結びの言葉は不要です。'
+    );
+  }
+
+  function generateAdvice(){
+    var btn = document.getElementById('generateAdviceBtn');
+    var resultEl = document.getElementById('adviceResult');
+    btn.disabled = true;
+    btn.textContent = '生成中…';
+    resultEl.style.display = 'block';
+    resultEl.className = 'advice-result loading';
+    resultEl.textContent = 'Claudeが今月のデータを確認しています…';
+
+    var prompt = buildAdvicePrompt();
+    fetch(aiEndpoint(), {
+      method: 'POST',
+      headers: aiHeaders(),
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    }).then(function(response){
+      if(!response.ok) throw new Error('request failed');
+      return response.json();
+    }).then(function(data){
+      var textBlocks = (data.content || []).filter(function(b){ return b.type === 'text'; }).map(function(b){ return b.text; });
+      var advice = textBlocks.join('\n').trim();
+      if(!advice) throw new Error('empty');
+      resultEl.className = 'advice-result';
+      resultEl.innerHTML = '<span class="advice-stamp">簿・今月のアドバイス</span><br>' + escapeHtml(advice).replace(/\n/g,'<br>');
+    }).catch(function(){
+      resultEl.className = 'advice-result error';
+      resultEl.textContent = aiFailureMessage();
+    }).finally(function(){
+      btn.disabled = false;
+      btn.textContent = 'アドバイスを生成する';
+    });
+  }
+  document.getElementById('generateAdviceBtn').addEventListener('click', generateAdvice);
+
+  /* ---------- AI相談用データまとめ ---------- */
+  function buildSummaryText(){
+    var monthTx = state.transactions.filter(function(t){ return t.date.slice(0,7) === state.currentMonth; });
+    var income  = monthTx.filter(function(t){return t.type==='income';}).reduce(function(s,t){return s+t.amount;},0);
+    var expense = monthTx.filter(function(t){return t.type==='expense';}).reduce(function(s,t){return s+t.amount;},0);
+
+    var byCategory = {};
+    monthTx.filter(function(t){return t.type==='expense';}).forEach(function(t){
+      byCategory[t.category] = (byCategory[t.category]||0) + t.amount;
+    });
+
+    // 直近3か月トレンド
+    var recentMonths = [];
+    var parts = state.currentMonth.split('-').map(Number);
+    for(var i=2;i>=1;i--){
+      var d = new Date(parts[0], parts[1]-1-i, 1);
+      recentMonths.push(ym(d));
+    }
+    var trendLines = recentMonths.map(function(m){
+      var mTx = state.transactions.filter(function(t){ return t.date.slice(0,7)===m; });
+      var mInc = mTx.filter(function(t){return t.type==='income';}).reduce(function(s,t){return s+t.amount;},0);
+      var mExp = mTx.filter(function(t){return t.type==='expense';}).reduce(function(s,t){return s+t.amount;},0);
+      var mp = m.split('-'); var ml = mp[0].slice(2)+'/'+parseInt(mp[1],10)+'月';
+      return '  '+ml+'：収入 '+Math.round(mInc).toLocaleString()+'円 / 支出 '+Math.round(mExp).toLocaleString()+'円';
+    }).join('\n');
+
+    // 予算消化
+    var budgetLines = Object.keys(state.budgets).map(function(cat){
+      var budget = state.budgets[cat];
+      var spent  = byCategory[cat] || 0;
+      var pct    = Math.round(spent/budget*100);
+      var flag   = pct >= 100 ? '⚠️超過' : pct >= 70 ? '注意' : '順調';
+      return '  '+cat+'：'+Math.round(spent).toLocaleString()+'円 / 予算'+Math.round(budget).toLocaleString()+'円（'+pct+'% '+flag+'）';
+    }).join('\n');
+
+    // カテゴリ別支出
+    var catLines = Object.keys(byCategory).sort(function(a,b){return byCategory[b]-byCategory[a];}).map(function(cat){
+      return '  '+cat+'：'+Math.round(byCategory[cat]).toLocaleString()+'円';
+    }).join('\n');
+
+    // 固定費
+    var recurringLines = state.recurring.map(function(r){
+      return '  '+(r.type==='income'?'【収入】':'【支出】')+r.category+' '+r.memo+' ：'+Math.round(r.amount).toLocaleString()+'円/月';
+    }).join('\n');
+
+    var sep = '━━━━━━━━━━━━━━━━━━━━';
+    var lines = [
+      sep,
+      '■ 家計簿データ：'+monthLabel(state.currentMonth),
+      sep,
+      '',
+      '【今月の収支】',
+      '  収入合計：'+Math.round(income).toLocaleString()+'円',
+      '  支出合計：'+Math.round(expense).toLocaleString()+'円',
+      '  残　　高：'+Math.round(income-expense).toLocaleString()+'円',
+      '',
+      '【カテゴリ別支出（多い順）】',
+      catLines || '  （記録なし）',
+      '',
+    ];
+    if(Object.keys(state.budgets).length){
+      lines.push('【予算の消化状況】');
+      lines.push(budgetLines);
+      lines.push('');
+    }
+    if(trendLines){
+      lines.push('【直近2か月の収支】');
+      lines.push(trendLines);
+      lines.push('');
+    }
+    if(state.recurring.length){
+      lines.push('【登録済み固定費】');
+      lines.push(recurringLines);
+      lines.push('');
+    }
+    lines.push(sep);
+    lines.push('');
+    lines.push('上記の家計データをもとに、改善点や節約のアドバイスをわかりやすく教えてください。');
+    return lines.join('\n');
+  }
+
+  var summaryOverlay = document.getElementById('summaryOverlay');
+  document.getElementById('genSummaryBtn').addEventListener('click', function(){
+    document.getElementById('summaryText').value = buildSummaryText();
+    summaryOverlay.classList.add('open');
+  });
+  document.getElementById('closeSummary').addEventListener('click', function(){ summaryOverlay.classList.remove('open'); });
+  summaryOverlay.addEventListener('click', function(e){ if(e.target === summaryOverlay) summaryOverlay.classList.remove('open'); });
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    var ta = document.getElementById('summaryText');
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(ta.value).then(function(){ showToast('コピーしました！ClaudeやChatGPTに貼り付けてください'); });
+    }else{
+      ta.select(); document.execCommand('copy');
+      showToast('コピーしました！ClaudeやChatGPTに貼り付けてください');
+    }
+  });
+
+  /* ---------- Budget tab ---------- */
+  function statusFor(percent){
+    if(percent === null) return null;
+    if(percent > 100) return 'over';
+    if(percent >= 70) return 'warn';
+    return 'ok';
+  }
+  var STATUS_LABEL = { ok:'順調', warn:'注意', over:'超過' };
+
+  function renderBudget(){
+    var monthExpense = state.transactions.filter(function(t){ return t.date.slice(0,7) === state.currentMonth && t.type === 'expense'; });
+    var spentByCategory = {};
+    monthExpense.forEach(function(t){ spentByCategory[t.category] = (spentByCategory[t.category]||0) + t.amount; });
+
+    var html = state.categories.expense.map(function(cat, idx){
+      var budget = state.budgets[cat] || 0;
+      var spent = spentByCategory[cat] || 0;
+      var percent = budget > 0 ? Math.round(spent/budget*100) : null;
+      var status = statusFor(percent);
+      return (
+        '<div class="budget-row" data-category="'+cat+'">'+
+          '<div class="budget-row-top">'+
+            '<div class="budget-cat-wrap"><span class="mini-gauge" data-gauge-cat="'+cat+'">'+tankGaugeSVG(percent, status, {width:30, height:42, id:'cat'+idx})+'</span><span class="budget-cat">'+cat+'</span></div>'+
+            '<div class="budget-input-wrap"><span>¥</span><input type="number" min="0" step="100" class="budget-input" data-category="'+cat+'" value="'+(budget||'')+'" placeholder="未設定"></div>'+
+          '</div>'+
+          '<div class="progress-track"><div class="progress-fill '+(status||'ok')+'" style="width:'+(percent!==null ? Math.min(percent,100) : 0)+'%;"></div></div>'+
+          '<div class="budget-meta">'+
+            '<span>使用 '+yen(spent)+(budget>0 ? ' / '+yen(budget)+(percent!==null?'（'+percent+'%）':'') : '')+'</span>'+
+            (status ? '<span class="stamp-mini '+status+'">'+STATUS_LABEL[status]+'</span>' : '<span style="font-size:12px;">予算未設定</span>')+
+          '</div>'+
+        '</div>'
+      );
+    }).join('');
+    document.getElementById('budgetList').innerHTML = html;
+
+    document.querySelectorAll('.budget-input').forEach(function(input, idx){
+      input.addEventListener('input', function(){
+        var cat = input.dataset.category;
+        var budget = parseFloat(input.value) || 0;
+        var spent = spentByCategory[cat] || 0;
+        var percent = budget > 0 ? Math.round(spent/budget*100) : null;
+        var status = statusFor(percent);
+        var row = input.closest('.budget-row');
+        row.querySelector('.progress-fill').className = 'progress-fill ' + (status||'ok');
+        row.querySelector('.progress-fill').style.width = (percent!==null ? Math.min(percent,100) : 0) + '%';
+        var metaSpan = row.querySelector('.budget-meta span');
+        metaSpan.textContent = '使用 ' + yen(spent) + (budget>0 ? ' / '+yen(budget)+(percent!==null?'（'+percent+'%）':'') : '');
+        var stampSpan = row.querySelector('.budget-meta span:last-child');
+        if(status){
+          stampSpan.outerHTML = '<span class="stamp-mini '+status+'">'+STATUS_LABEL[status]+'</span>';
+        }else{
+          stampSpan.outerHTML = '<span style="font-size:12px;">予算未設定</span>';
+        }
+        var gaugeSpan = row.querySelector('.mini-gauge');
+        gaugeSpan.innerHTML = tankGaugeSVG(percent, status, {width:30, height:42, id:'cat'+idx+'-live'});
+      });
+    });
+  }
+
+  document.getElementById('saveBudget').addEventListener('click', function(){
+    document.querySelectorAll('.budget-input').forEach(function(input){
+      var cat = input.dataset.category;
+      var val = parseFloat(input.value);
+      if(val > 0){ state.budgets[cat] = val; }
+      else{ delete state.budgets[cat]; }
+    });
+    saveBudgets();
+    showToast('予算を保存しました');
+  });
+
+  /* ---------- Recurring (fixed-cost) tab ---------- */
+  function isReflected(recurringId){
+    return state.transactions.some(function(t){ return t.recurringId === recurringId && t.date.slice(0,7) === state.currentMonth; });
+  }
+
+  function doReflect(item){
+    if(isReflected(item.id)) return false;
+    var parts = state.currentMonth.split('-').map(Number);
+    var daysInMonth = new Date(parts[0], parts[1], 0).getDate();
+    var day = Math.min(Math.max(1, item.day || 1), daysInMonth);
+    var dateStr = state.currentMonth + '-' + String(day).padStart(2,'0');
+    state.transactions.push({
+      id: uid(), date: dateStr, type: item.type, category: item.category,
+      amount: item.amount, memo: item.memo || '', recurringId: item.id, createdAt: Date.now()
+    });
+    return true;
+  }
+
+  function reflectRecurring(id){
+    var item = state.recurring.find(function(r){ return r.id === id; });
+    if(!item) return;
+    if(!doReflect(item)){ showToast('この固定費は今月すでに反映済みです'); return; }
+    saveTransactions();
+    renderRecurring();
+    renderRecent();
+    showToast('反映しました：' + item.category + '　' + yen(item.amount));
+  }
+
+  function reflectAllRecurring(){
+    var count = 0;
+    state.recurring.forEach(function(item){ if(doReflect(item)) count++; });
+    if(count > 0){
+      saveTransactions();
+      renderRecurring();
+      renderRecent();
+      showToast(count + '件の固定費を今月に反映しました');
+    }else{
+      showToast('反映できる固定費がありません（すべて反映済み、または未登録です）');
+    }
+  }
+
+  function addRecurring(type, category, amountRaw, memo, dayRaw){
+    var amount = parseFloat(amountRaw);
+    if(!amount || amount <= 0){ showToast('金額を正しく入力してください'); return false; }
+    if(!category){ showToast('カテゴリを選択してください'); return false; }
+    var day = parseInt(dayRaw, 10);
+    if(!day || day < 1) day = 1;
+    if(day > 31) day = 31;
+    state.recurring.push({ id: uid(), type: type, category: category, amount: amount, memo: (memo||'').trim(), day: day });
+    saveRecurring();
+    renderRecurring();
+    showToast('固定費を登録しました');
+    return true;
+  }
+
+  function deleteRecurring(id){
+    if(!confirm('この固定費の登録を削除しますか？\n過去に反映された記録はそのまま残ります。')) return;
+    state.recurring = state.recurring.filter(function(r){ return r.id !== id; });
+    saveRecurring();
+    renderRecurring();
+    showToast('固定費を削除しました');
+  }
+
+  function recurringRowHTML(item){
+    var reflected = isReflected(item.id);
+    return (
+      '<div class="recurring-row" data-id="'+item.id+'">'+
+        '<div class="recurring-row-top">'+
+          '<select class="rec-type" data-id="'+item.id+'">'+
+            '<option value="expense"'+(item.type==='expense'?' selected':'')+'>支出</option>'+
+            '<option value="income"'+(item.type==='income'?' selected':'')+'>収入</option>'+
+          '</select>'+
+          '<select class="rec-category" data-id="'+item.id+'">'+
+            state.categories[item.type].map(function(c){ return '<option value="'+c+'"'+(c===item.category?' selected':'')+'>'+c+'</option>'; }).join('')+
+          '</select>'+
+          '<button type="button" class="rec-delete-btn" data-id="'+item.id+'">削除</button>'+
+        '</div>'+
+        '<div class="recurring-row-mid">'+
+          '<div class="rec-field"><span>¥</span><input type="number" class="rec-amount" data-id="'+item.id+'" min="0" step="100" value="'+item.amount+'"></div>'+
+          '<input type="text" class="rec-memo" data-id="'+item.id+'" maxlength="30" placeholder="メモ（例：Netflix）" value="'+escapeHtml(item.memo||'')+'">'+
+          '<div class="rec-day"><input type="number" class="rec-day-input" data-id="'+item.id+'" min="1" max="31" value="'+item.day+'"><span>日</span></div>'+
+        '</div>'+
+        '<div class="recurring-row-bottom">'+
+          (reflected
+            ? '<span class="rec-status reflected">この月は反映済み</span>'
+            : '<button type="button" class="rec-reflect-btn" data-id="'+item.id+'">この月に反映する</button>')+
+        '</div>'+
+      '</div>'
+    );
+  }
+
+  function renderRecurring(){
+    var panel = document.getElementById('panel-recurring');
+    var listHtml = state.recurring.length === 0
+      ? '<p class="gauge-empty">まだ固定費が登録されていません。下のフォームから追加しましょう。</p>'
+      : state.recurring.map(recurringRowHTML).join('');
+
+    panel.innerHTML =
+      '<div class="card">'+
+        '<div class="recurring-header"><h2>固定費の登録</h2><button type="button" class="btn-text-inline" id="reflectAllBtn">今月の未反映分をまとめて反映</button></div>'+
+        '<p class="hint" style="color:var(--ink-soft); font-size:12.5px; margin:0 0 4px;">毎月決まった金額が動く費用（家賃・サブスク・給料など）を登録しておくと、月ごとにボタン一つで記録できます。</p>'+
+        '<div class="recurring-list">'+listHtml+'</div>'+
+      '</div>'+
+      '<div class="card">'+
+        '<h2>新しい固定費を追加</h2>'+
+        '<div class="type-toggle" id="recAddTypeToggle">'+
+          '<button type="button" data-type="expense" class="selected">支出</button>'+
+          '<button type="button" data-type="income">収入</button>'+
+        '</div>'+
+        '<div class="field"><label for="rec-add-category">カテゴリ</label><select id="rec-add-category"></select></div>'+
+        '<div class="field"><label for="rec-add-amount">金額</label><div class="amount-row"><span>¥</span><input type="number" id="rec-add-amount" min="0" step="1" placeholder="0"></div></div>'+
+        '<div class="field"><label for="rec-add-memo">メモ（任意）</label><input type="text" id="rec-add-memo" maxlength="30" placeholder="例：家賃、Netflix"></div>'+
+        '<div class="field"><label for="rec-add-day">毎月の反映日</label><input type="number" id="rec-add-day" min="1" max="31" value="1"></div>'+
+        '<button type="button" class="btn-primary" id="addRecurringBtn">登録する</button>'+
+      '</div>';
+
+    var addType = 'expense';
+    function populateAddCategory(){
+      document.getElementById('rec-add-category').innerHTML = state.categories[addType].map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+    }
+    populateAddCategory();
+    panel.querySelectorAll('#recAddTypeToggle button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        addType = btn.dataset.type;
+        panel.querySelectorAll('#recAddTypeToggle button').forEach(function(b){ b.classList.toggle('selected', b===btn); });
+        populateAddCategory();
+      });
+    });
+
+    document.getElementById('addRecurringBtn').addEventListener('click', function(){
+      var ok = addRecurring(
+        addType,
+        document.getElementById('rec-add-category').value,
+        document.getElementById('rec-add-amount').value,
+        document.getElementById('rec-add-memo').value,
+        document.getElementById('rec-add-day').value
+      );
+      if(ok){
+        document.getElementById('rec-add-amount').value = '';
+        document.getElementById('rec-add-memo').value = '';
+        document.getElementById('rec-add-day').value = '1';
+      }
+    });
+
+    document.getElementById('reflectAllBtn').addEventListener('click', reflectAllRecurring);
+
+    panel.querySelectorAll('.rec-delete-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ deleteRecurring(btn.dataset.id); });
+    });
+    panel.querySelectorAll('.rec-reflect-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ reflectRecurring(btn.dataset.id); });
+    });
+    panel.querySelectorAll('.rec-type').forEach(function(sel){
+      sel.addEventListener('change', function(){
+        var item = state.recurring.find(function(r){ return r.id === sel.dataset.id; });
+        if(!item) return;
+        item.type = sel.value;
+        item.category = state.categories[item.type][0];
+        saveRecurring();
+        renderRecurring();
+      });
+    });
+    panel.querySelectorAll('.rec-category').forEach(function(sel){
+      sel.addEventListener('change', function(){
+        var item = state.recurring.find(function(r){ return r.id === sel.dataset.id; });
+        if(item){ item.category = sel.value; saveRecurring(); }
+      });
+    });
+    panel.querySelectorAll('.rec-amount').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        var item = state.recurring.find(function(r){ return r.id === inp.dataset.id; });
+        if(!item) return;
+        var v = parseFloat(inp.value);
+        if(v > 0){ item.amount = v; saveRecurring(); }
+        else{ inp.value = item.amount; showToast('金額を正しく入力してください'); }
+      });
+    });
+    panel.querySelectorAll('.rec-memo').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        var item = state.recurring.find(function(r){ return r.id === inp.dataset.id; });
+        if(item){ item.memo = inp.value.trim(); saveRecurring(); }
+      });
+    });
+    panel.querySelectorAll('.rec-day-input').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        var item = state.recurring.find(function(r){ return r.id === inp.dataset.id; });
+        if(!item) return;
+        var v = parseInt(inp.value, 10);
+        if(!v || v < 1) v = 1;
+        if(v > 31) v = 31;
+        item.day = v; inp.value = v;
+        saveRecurring();
+      });
+    });
+  }
+
+  /* ---------- Category management tab ---------- */
+  function renameCategory(type, oldName, newName){
+    var idx = state.categories[type].indexOf(oldName);
+    if(idx === -1) return false;
+    state.categories[type][idx] = newName;
+    state.transactions.forEach(function(t){
+      if(t.type === type && t.category === oldName) t.category = newName;
+    });
+    if(type === 'expense' && Object.prototype.hasOwnProperty.call(state.budgets, oldName)){
+      state.budgets[newName] = state.budgets[oldName];
+      delete state.budgets[oldName];
+    }
+    saveCategories();
+    saveTransactions();
+    saveBudgets();
+    return true;
+  }
+
+  function handleRenameInput(type, oldName, inputEl){
+    var newName = inputEl.value.trim();
+    if(newName === oldName) { inputEl.value = oldName; return; }
+    if(!newName){ inputEl.value = oldName; showToast('カテゴリ名を入力してください'); return; }
+    if(state.categories[type].indexOf(newName) !== -1){ inputEl.value = oldName; showToast('すでに存在するカテゴリ名です'); return; }
+    renameCategory(type, oldName, newName);
+    renderCategories();
+    populateCategorySelect();
+    populateFilterCategory();
+    showToast('カテゴリ名を更新しました（過去の記録にも反映されました）');
+  }
+
+  function addCategory(type, rawName){
+    var name = (rawName || '').trim();
+    if(!name){ showToast('カテゴリ名を入力してください'); return; }
+    if(state.categories[type].indexOf(name) !== -1){ showToast('すでに存在するカテゴリ名です'); return; }
+    state.categories[type].push(name);
+    saveCategories();
+    renderCategories();
+    populateCategorySelect();
+    populateFilterCategory();
+    showToast('カテゴリを追加しました');
+  }
+
+  function deleteCategory(type, name){
+    if(state.categories[type].length <= 1){ showToast('最後のカテゴリは削除できません'); return; }
+    if(!confirm('「'+name+'」を削除しますか？\n過去の記録はそのまま残りますが、新しい入力では選択できなくなります。')) return;
+    state.categories[type] = state.categories[type].filter(function(c){ return c !== name; });
+    if(type === 'expense'){ delete state.budgets[name]; saveBudgets(); }
+    saveCategories();
+    renderCategories();
+    populateCategorySelect();
+    populateFilterCategory();
+    showToast('カテゴリを削除しました');
+  }
+
+  function categorySectionHTML(type, label){
+    var cats = state.categories[type];
+    var rows = cats.map(function(c){
+      return '<div class="category-row" data-type="'+type+'" data-original="'+escapeHtml(c)+'">'+
+        '<input type="text" class="category-name-input" value="'+escapeHtml(c)+'" maxlength="20">'+
+        '<button type="button" class="cat-delete-btn" data-type="'+type+'" data-name="'+escapeHtml(c)+'">削除</button>'+
+      '</div>';
+    }).join('');
+    return (
+      '<div class="card"><h2>'+label+'</h2>'+
+        '<div class="category-list">'+rows+'</div>'+
+        '<div class="category-add-row">'+
+          '<input type="text" class="category-add-input" data-type="'+type+'" maxlength="20" placeholder="新しいカテゴリ名">'+
+          '<button type="button" class="cat-add-btn" data-type="'+type+'">追加</button>'+
+        '</div>'+
+      '</div>'
+    );
+  }
+
+  function renderCategories(){
+    document.getElementById('panel-categories').innerHTML =
+      categorySectionHTML('expense', '支出カテゴリ') + categorySectionHTML('income', '収入カテゴリ');
+
+    document.querySelectorAll('.category-name-input').forEach(function(input){
+      var row = input.closest('.category-row');
+      input.addEventListener('blur', function(){ handleRenameInput(row.dataset.type, row.dataset.original, input); });
+      input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); input.blur(); } });
+    });
+    document.querySelectorAll('.cat-delete-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ deleteCategory(btn.dataset.type, btn.dataset.name); });
+    });
+    document.querySelectorAll('.cat-add-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var input = document.querySelector('.category-add-input[data-type="'+btn.dataset.type+'"]');
+        addCategory(btn.dataset.type, input.value);
+      });
+    });
+    document.querySelectorAll('.category-add-input').forEach(function(input){
+      input.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){ e.preventDefault(); addCategory(input.dataset.type, input.value); }
+      });
+    });
+  }
+
+  /* ---------- Data drawer ---------- */
+  var overlay = document.getElementById('drawerOverlay');
+  document.getElementById('openDrawer').addEventListener('click', function(){
+    document.getElementById('workerUrlInput').value = state.workerUrl;
+    document.getElementById('proxySecretInput').value = state.proxySecret;
+    overlay.classList.add('open');
+  });
+  document.getElementById('closeDrawer').addEventListener('click', function(){ overlay.classList.remove('open'); });
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.classList.remove('open'); });
+
+  document.getElementById('saveWorkerSettings').addEventListener('click', function(){
+    state.workerUrl = document.getElementById('workerUrlInput').value.trim();
+    state.proxySecret = document.getElementById('proxySecretInput').value.trim();
+    localStorage.setItem(STORE_WORKER_URL, state.workerUrl);
+    localStorage.setItem(STORE_PROXY_SECRET, state.proxySecret);
+    showToast(state.workerUrl ? 'プロキシ設定を保存しました' : 'プロキシ設定を解除しました（このチャット内のみで動作します）');
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    var payload = { transactions: state.transactions, budgets: state.budgets, categories: state.categories, recurring: state.recurring, exportedAt: new Date().toISOString() };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'kakeibo_' + todayStr() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('データを書き出しました');
+  });
+
+  document.getElementById('importFile').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(reader.result);
+        if(!Array.isArray(data.transactions)) throw new Error('invalid');
+        if(!confirm('現在のデータを置き換えて読み込みますか？')) return;
+        state.transactions = data.transactions;
+        state.budgets = data.budgets || {};
+        state.categories = data.categories || { expense: DEFAULT_EXPENSE_CATEGORIES.slice(), income: DEFAULT_INCOME_CATEGORIES.slice() };
+        state.recurring = Array.isArray(data.recurring) ? data.recurring : [];
+        saveTransactions();
+        saveBudgets();
+        saveCategories();
+        saveRecurring();
+        renderActiveTab();
+        overlay.classList.remove('open');
+        showToast('データを読み込みました');
+      }catch(err){
+        showToast('読み込みに失敗しました。ファイルを確認してください。');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    if(!confirm('すべての記録と予算を削除します。この操作は取り消せません。よろしいですか？')) return;
+    state.transactions = [];
+    state.budgets = {};
+    state.categories = { expense: DEFAULT_EXPENSE_CATEGORIES.slice(), income: DEFAULT_INCOME_CATEGORIES.slice() };
+    state.recurring = [];
+    saveTransactions();
+    saveBudgets();
+    saveCategories();
+    saveRecurring();
+    renderActiveTab();
+    overlay.classList.remove('open');
+    showToast('すべてのデータを削除しました');
+  });
+
+  /* ---------- Render dispatch ---------- */
+  function renderActiveTab(){
+    populateFilterCategory();
+    renderRecent();
+    if(state.activeTab === 'list') renderList();
+    if(state.activeTab === 'analysis') renderAnalysis();
+    if(state.activeTab === 'budget') renderBudget();
+    if(state.activeTab === 'recurring') renderRecurring();
+    if(state.activeTab === 'categories') renderCategories();
+  }
+
+  renderActiveTab();
+})();
+</script>
+</body>
+</html>
